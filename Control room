@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Control Room</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Poppins:wght@300;400;600&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* === ১. থিম ভেরিয়েবল (ডিফল্ট: Cyber Blue) === */
+        :root {
+            --bg: #0d0d1a;
+            --panel: #161625;
+            --prime: #00f2fe;
+            --sec: #0072ff;
+            --txt: #fff;
+            --warn: #ff4757;
+            --ring: conic-gradient(#00f2fe, #0072ff, #00f2fe);
+        }
+
+        /* থিম কালেকশন */
+        body.theme-dark-night { --bg: #000000; --panel: #111111; --prime: #ffffff; --sec: #888888; --warn: #ff0000; --ring: conic-gradient(#fff, #333, #fff); }
+        body.theme-royal-gold { --bg: #1a1500; --panel: #292200; --prime: #ffd700; --sec: #ffaa00; --warn: #ff4500; --ring: conic-gradient(#ffd700, #ffaa00, #ffd700); }
+        body.theme-matrix { --bg: #001a05; --panel: #05250a; --prime: #00ff41; --sec: #008f11; --warn: #ff0000; --ring: conic-gradient(#00ff41, #008f11, #00ff41); }
+        body.theme-red-alert { --bg: #1a0000; --panel: #2b0000; --prime: #ff0000; --sec: #ff5e00; --warn: #ffcc00; --ring: conic-gradient(#ff0000, #ff5e00, #ff0000); }
+        body.theme-purple { --bg: #12001a; --panel: #1e0525; --prime: #d600ff; --sec: #9900ff; --warn: #ff0055; --ring: conic-gradient(#d600ff, #9900ff, #d600ff); }
+
+        /* === বেসিক স্টাইল === */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; outline: none; }
+        body { background-color: var(--bg); color: var(--txt); height: 100vh; overflow: hidden; display: flex; justify-content: center; transition: background 0.5s; }
+
+        .mobile-container { 
+            width: 100%; max-width: 420px; background: var(--panel); height: 100%; 
+            padding: 20px; display: flex; flex-direction: column; position: relative; 
+            box-shadow: 0 0 40px rgba(0,0,0, 0.8); overflow-y: auto; transition: background 0.5s;
+        }
+
+        /* স্ট্যাটাস ইন্ডিকেটর (অনলাইন/অফলাইন) */
+        .status-badge {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            font-size: 0.7rem; font-weight: bold; padding: 4px 10px; border-radius: 20px;
+            background: rgba(0,0,0,0.5); border: 1px solid #555; color: #aaa; z-index: 1000;
+        }
+        .status-badge.online { color: #00ff41; border-color: #00ff41; }
+        .status-badge.offline { color: #ff4757; border-color: #ff4757; }
+
+        /* টপ বাটনস */
+        .top-btn { 
+            position: absolute; top: 15px; padding: 6px 12px; border-radius: 5px; 
+            font-size: 0.7rem; font-weight: bold; cursor: pointer; z-index: 999; 
+            border: 1px solid var(--prime); color: var(--prime); background: rgba(0,0,0,0.3); 
+        }
+        .lang-btn { left: 15px; }
+        .theme-btn { right: 15px; }
+
+        /* থিম মেনু */
+        #theme-menu {
+            display: none; position: absolute; top: 50px; right: 15px; width: 140px;
+            background: var(--panel); border: 1px solid var(--prime);
+            border-radius: 8px; padding: 5px; z-index: 2000; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+        }
+        .theme-opt {
+            padding: 8px; margin-bottom: 3px; text-align: center; cursor: pointer;
+            border-radius: 4px; font-size: 0.7rem; font-weight: bold; color: #fff;
+        }
+
+        /* স্ক্রিন */
+        #login-screen, #dashboard-screen, #admin-screen { display: none; height: 100%; flex-direction: column; }
+        #login-screen { display: flex; justify-content: center; align-items: center; }
+
+        /* === ১. লগইন (বালু ঘড়ি) === */
+        .hourglass-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; margin-top: 60px; }
+        .hourglass { display: block; width: 60px; height: 100px; position: relative; animation: hourglassRotate 4s ease-in-out infinite; }
+        .hourglass-glass { border-top: 50px solid var(--prime); border-left: 30px solid transparent; border-right: 30px solid transparent; position: absolute; top: 0; filter: drop-shadow(0 0 5px var(--prime)); }
+        .hourglass-glass.bottom { top: 50px; border-top: none; border-bottom: 50px solid var(--prime); }
+        .sand-stream { position: absolute; top: 50px; left: 29px; width: 2px; height: 0; background: #fff; animation: sandFall 4s ease-in-out infinite; z-index: 2; box-shadow: 0 0 5px #fff; }
+        .live-time { font-family: 'Orbitron'; font-size: 2rem; font-weight: 700; color: var(--txt); text-shadow: 0 0 10px var(--prime); margin-top: 15px; }
+
+        @keyframes hourglassRotate { 0%, 45% { transform: rotate(0deg); } 50%, 95% { transform: rotate(180deg); } 100% { transform: rotate(360deg); } }
+        @keyframes sandFall { 0% { height: 0; top: 50px; opacity: 1; } 10%, 80% { height: 50px; top: 50px; opacity: 1; } 90%, 100% { height: 0; top: 100px; opacity: 0; } }
+
+        .neon-heart { font-size: 3rem; color: var(--warn); filter: drop-shadow(0 0 10px var(--warn)); animation: beat 1s infinite; margin-bottom: 20px; }
+        @keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        .input-group label { display: block; color: var(--prime); margin-bottom: 5px; font-size: 0.8rem; }
+        .input-group input { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid #333; color: var(--txt); border-radius: 8px; margin-bottom: 15px; }
+        .btn-main { width: 100%; padding: 15px; background: linear-gradient(90deg, var(--prime), var(--sec)); color: #000; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-family: 'Orbitron'; }
+        .admin-link { margin-top: 20px; color: #888; text-decoration: underline; cursor: pointer; font-size: 0.8rem; text-align: center;}
+
+        /* === ২. ড্যাশবোর্ড === */
+        .header { display: flex; justify-content: space-between; margin-top: 50px; margin-bottom: 20px; }
+        .user-info h2 { font-size: 1.1rem; color: var(--txt); margin: 0; }
+        .user-info p { font-size: 0.7rem; color: var(--prime); margin: 0; }
+        .logout { color: var(--warn); font-weight: bold; cursor: pointer; border: 1px solid var(--warn); padding: 5px 10px; border-radius: 5px; font-size: 0.8rem; }
+
+        .motive { 
+            text-align: center; font-family: 'Cinzel Decorative', cursive; 
+            font-size: 1.8rem; font-weight: 900; margin-bottom: 25px;
+            background: linear-gradient(45deg, #ffcc00, #ff8800, #ffcc00); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255, 136, 0, 0.6)); animation: textPulse 3s infinite alternate ease-in-out;
+        }
+        @keyframes textPulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+
+        /* টাইমার */
+        .timer-wrapper { position: relative; width: 260px; height: 260px; margin: 0 auto; display: flex; justify-content: center; align-items: center; }
+        .seismic-svg { position: absolute; width: 100%; height: 100%; fill: none; stroke: var(--prime); stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 0 8px var(--prime)); z-index: 0; opacity: 0.6; animation: pulse 1s infinite alternate; }
+        .seismic-path { stroke-dasharray: 600; stroke-dashoffset: 600; animation: quakeRun 4s linear infinite; }
+        
+        .neon-circle { 
+            position: absolute; width: 220px; height: 220px; border-radius: 50%;
+            background: var(--ring); animation: spin 4s linear infinite; z-index: 1; 
+            box-shadow: 0 0 20px var(--prime);
+        }
+        
+        .timer-inner { width: 200px; height: 200px; background: var(--panel); border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; z-index: 2; box-shadow: inset 0 0 40px rgba(0,0,0,0.9); border: 2px solid rgba(255,255,255,0.1); }
+        .cr-title { font-family: 'Orbitron'; font-size: 1.5rem; font-weight: 800; color: var(--prime); text-align: center; text-shadow: 0 0 10px var(--prime); margin-bottom: 5px; }
+        .cr-time { font-family: 'Poppins'; font-size: 1rem; color: var(--txt); font-weight: 600; }
+
+        /* কাস্টম ডেট বাটন */
+        .btn-edit-time { background: transparent; border: 1px solid var(--prime); color: var(--prime); padding: 3px 8px; border-radius: 15px; font-size: 0.6rem; margin-top: 8px; cursor: pointer; }
+
+        .btn-reset { width: 100%; padding: 16px; background: var(--warn); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: auto; z-index: 10; margin-bottom: 10px; box-shadow: 0 0 20px rgba(255, 71, 87, 0.5); }
+
+        /* টার্গেট এনিমেশন */
+        .target-container { width: 100%; height: 80px; display: flex; justify-content: center; align-items: center; position: relative; margin-top: 5px; opacity: 0.7; }
+        .t-circle { position: absolute; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+        .tc1 { width: 70px; height: 70px; border-top-color: var(--prime); animation: spin 3s linear infinite; }
+        .tc2 { width: 40px; height: 40px; border-bottom-color: var(--warn); animation: spinRev 2s linear infinite; }
+        .t-cross { width: 90px; height: 1px; background: rgba(255,255,255,0.3); position: absolute; }
+        .t-cross-v { transform: rotate(90deg); }
+
+        /* অ্যাডমিন প্যানেল */
+        #admin-panel { background: var(--panel); padding-top: 20px; }
+        .admin-header { display: flex; justify-content: center; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; position: relative; }
+        .admin-title { font-size: 1rem; font-weight: bold; color: var(--prime); font-family: 'Orbitron'; letter-spacing: 1px; }
+        .close-admin { position: absolute; right: 0; background: var(--warn); color: white; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+        
+        .data-table-container { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; border: 1px solid #333; background: rgba(0,0,0,0.2); padding: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { background: var(--prime); color: #000; padding: 10px; position: sticky; top: 0; }
+        td { padding: 10px; border-bottom: 1px solid #333; text-align: center; color: var(--txt); }
+        
+        .action-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-action { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.8rem; color: #fff; }
+        .btn-agent { background: #6c5ce7; }
+        .btn-copy { background: #0984e3; }
+        .btn-img { width: 100%; padding: 15px; background: #00b894; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spinRev { 100% { transform: rotate(-360deg); } }
+        @keyframes quakeRun { 0% { stroke-dashoffset: 600; } 100% { stroke-dashoffset: 0; } }
+    </style>
+</head>
+<body>
+
+<div class="mobile-container">
+    <div id="statusBadge" class="status-badge offline">● OFFLINE</div>
+
+    <div class="top-btn lang-btn" onclick="toggleLang()" id="langBtn">EN</div>
+    <div class="top-btn theme-btn" onclick="toggleThemeMenu()">🎨</div>
+
+    <div id="theme-menu">
+        <div class="theme-opt" style="background:linear-gradient(90deg, #00f2fe, #0072ff)" onclick="setTheme('')">CYBER BLUE</div>
+        <div class="theme-opt" style="background:#111" onclick="setTheme('theme-dark-night')">DARK NIGHT</div>
+        <div class="theme-opt" style="background:linear-gradient(90deg, #ffd700, #ffaa00)" onclick="setTheme('theme-royal-gold')">ROYAL GOLD</div>
+        <div class="theme-opt" style="background:linear-gradient(90deg, #00ff41, #008f11)" onclick="setTheme('theme-matrix')">MATRIX</div>
+        <div class="theme-opt" style="background:linear-gradient(90deg, #ff0000, #ff5e00)" onclick="setTheme('theme-red-alert')">RED ALERT</div>
+        <div class="theme-opt" style="background:linear-gradient(90deg, #d600ff, #9900ff)" onclick="setTheme('theme-purple')">NEON PURPLE</div>
+    </div>
+
+    <div id="login-screen" style="display: flex;">
+        <div class="hourglass-container">
+            <div class="hourglass">
+                <div class="hourglass-glass top"></div>
+                <div class="sand-stream"></div>
+                <div class="hourglass-glass bottom"></div>
+            </div>
+            <div class="live-time" id="liveTime">00:00:00</div>
+        </div>
+
+        <div class="neon-heart">❤</div>
+
+        <h2 id="t-ident" style="margin-bottom: 5px; text-align:center; color:var(--txt); font-weight:bold;">IDENTIFICATION</h2>
+        <p id="t-access" style="color: var(--text-muted); margin-bottom: 30px; text-align:center; font-size:0.8rem;">Access Control Room</p>
+
+        <div class="input-group">
+            <label id="t-userLbl">USERNAME *</label>
+            <input type="text" id="username">
+        </div>
+        <div class="input-group">
+            <label id="t-dobLbl">DATE OF BIRTH (OPTIONAL)</label>
+            <input type="date" id="dob">
+        </div>
+
+        <button class="btn-main" id="btn-login" onclick="login()">ACCESS SYSTEM</button>
+        <div class="admin-link" id="t-adminLink" onclick="openAdmin()">Admin Access</div>
+    </div>
+
+    <div id="dashboard-screen">
+        <div class="header">
+            <div class="user-info">
+                <h2 id="dispName">USER</h2>
+                <p>STATUS: LIVE TRACKING</p>
+            </div>
+            <div class="logout" onclick="logout()">EXIT</div>
+        </div>
+
+        <div class="motive" id="t-motive">INSHALLAH<br>YOU CAN DO IT</div>
+
+        <div class="timer-wrapper">
+            <svg class="seismic-svg" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="98" class="seismic-path" />
+            </svg>
+            <div class="neon-circle"></div>
+            <div class="timer-inner">
+                <div class="cr-title" id="txt-control">CONTROL<br>ROOM</div>
+                <div class="cr-time" id="timer">0d 0h 0m 0s</div>
+                <button class="btn-edit-time" onclick="editDate()">📅 EDIT</button>
+            </div>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+        
+        <button class="btn-reset" id="btn-reset" onclick="reset()">⚠️ REPORT RELAPSE (RESET)</button>
+
+        <div class="target-container">
+            <div class="t-circle tc1"></div>
+            <div class="t-circle tc2"></div>
+            <div class="t-cross"></div>
+            <div class="t-cross t-cross-v"></div>
+        </div>
+    </div>
+
+    <div id="admin-screen">
+        <div class="admin-header">
+            <div class="admin-title">DATABASE</div>
+            <div class="close-admin" onclick="closeAdmin()">CLOSE X</div>
+        </div>
+        
+        <div class="data-table-container" id="report-content">
+            <table id="dataTable">
+                <thead><tr><th>Date</th><th>Name</th><th>Time</th><th>Status</th></tr></thead>
+                <tbody id="tableBody"><tr><td colspan="4">No Data</td></tr></tbody>
+            </table>
+        </div>
+        
+        <div class="action-row">
+            <button class="btn-action btn-agent" onclick="agentCreateSheet()">🤖 EXCEL</button>
+            <button class="btn-action btn-copy" onclick="copyTable()">📋 COPY</button>
+        </div>
+        <button class="btn-img" onclick="downloadAsImage()">⬇ IMAGE</button>
+    </div>
+
+</div>
+
+<script>
+    // --- কনফিগারেশন ---
+    const API_URL = "https://sheetdb.io/api/v1/c893e6p0ehkjq"; // এখানে আপনার API লিংক দিন
+    
+    let currentUser = localStorage.getItem("last_user") || "";
+    let startTime = 0;
+    let dbData = JSON.parse(localStorage.getItem("control_room_db")) || [];
+    let pendingSync = JSON.parse(localStorage.getItem("pending_sync")) || [];
+
+    // ভাষা সেটিংস
+    let isEnglish = true;
+    const translations = {
+        en: { btn: "EN", ident: "IDENTIFICATION", access: "Access Control Room", userLbl: "USERNAME *", dobLbl: "DATE OF BIRTH (OPTIONAL)", loginBtn: "ACCESS SYSTEM", adminLink: "Admin Access", motive: "INSHALLAH<br>YOU CAN DO IT", resetBtn: "⚠️ REPORT RELAPSE (RESET)" },
+        bn: { btn: "BN", ident: "পরিচয় নিশ্চিতকরণ", access: "কন্ট্রোল রুমে প্রবেশ করুন", userLbl: "ব্যবহারকারীর নাম *", dobLbl: "জন্ম তারিখ (ঐচ্ছিক)", loginBtn: "সিস্টেমে প্রবেশ করুন", adminLink: "অ্যাডমিন প্রবেশ", motive: "ইনশাআল্লাহ<br>তুমি এটা পারবে", resetBtn: "⚠️ রিল্যাপস রিপোর্ট (রিসেট)" }
+    };
+
+    window.onload = function() {
+        updateClock();
+        setInterval(updateClock, 1000);
+        document.getElementById('login-screen').style.display = 'flex';
+        let savedTheme = localStorage.getItem("app_theme");
+        if(savedTheme) document.body.className = savedTheme;
+        checkConnection();
+        window.addEventListener('online', syncData);
+        window.addEventListener('offline', checkConnection);
+    };
+
+    // --- অটো সিংক সিস্টেম (Auto Sync) ---
+    function checkConnection() {
+        const badge = document.getElementById('statusBadge');
+        if(navigator.onLine) {
+            badge.innerText = "● ONLINE";
+            badge.className = "status-badge online";
+            syncData(); // অনলাইন হলে সিংক শুরু
+        } else {
+            badge.innerText = "● OFFLINE";
+            badge.className = "status-badge offline";
+        }
+    }
+
+    function syncData() {
+        if(pendingSync.length > 0 && navigator.onLine) {
+            document.getElementById('statusBadge').innerText = "↻ SYNCING...";
+            
+            // একটি একটি করে ডাটা পাঠানো
+            let dataToSend = pendingSync.shift(); // প্রথম ডাটা নাও
+            let payload = { data: [dataToSend] };
+
+            fetch(API_URL, {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            }).then(() => {
+                localStorage.setItem("pending_sync", JSON.stringify(pendingSync)); // লিস্ট আপডেট
+                if(pendingSync.length > 0) syncData(); // বাকি থাকলে আবার পাঠাও
+                else checkConnection(); // শেষ হলে স্ট্যাটাস ঠিক করো
+            }).catch(err => {
+                pendingSync.unshift(dataToSend); // ফেইল হলে ফেরত রাখো
+                checkConnection();
+            });
+        }
+    }
+
+    // --- মেইন ফাংশন ---
+    function login() {
+        let name = document.getElementById('username').value.trim();
+        let dob = document.getElementById('dob').value;
+        if(!name) { alert("Enter Name!"); return; }
+
+        currentUser = name;
+        localStorage.setItem("last_user", name);
+        if(navigator.vibrate) navigator.vibrate(200);
+        
+        // ভয়েস গ্রিটিং (ভাষা অনুযায়ী)
+        let greet = isEnglish ? "Welcome Agent " + name : "স্বাগতম এজেন্ট " + name;
+        speak(greet);
+
+        let storedTime = localStorage.getItem("time_" + name);
+        if(storedTime) {
+            startTime = parseInt(storedTime);
+        } else {
+            startTime = Date.now();
+            localStorage.setItem("time_" + name, startTime);
+            saveData("NEW LOGIN", "0d 0h 0m", dob);
+        }
+
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard-screen').style.display = 'flex';
+        document.getElementById('dispName').innerText = "USER: " + name.toUpperCase();
+        setInterval(runTimer, 1000);
+        runTimer(); 
+    }
+
+    function reset() {
+        if(!confirm("Confirm Relapse?")) return;
+        if(navigator.vibrate) navigator.vibrate([500, 200, 500]);
+        playSirenSound();
+
+        let diff = Date.now() - startTime;
+        let d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        let h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        let m = Math.floor((diff / (1000 * 60)) % 60);
+        let dur = `${d}d ${h}h ${m}m`;
+        
+        saveData("RELAPSED", dur, "N/A");
+        startTime = Date.now();
+        localStorage.setItem("time_" + currentUser, startTime);
+        alert("Reset Successful!");
+    }
+
+    function saveData(status, duration, dob) {
+        let now = new Date();
+        let entry = {
+            Date: now.toLocaleDateString(),
+            Time: now.toLocaleTimeString(),
+            Name: currentUser,
+            DOB: dob || "N/A",
+            Duration: duration,
+            Status: status
+        };
+        
+        // ১. লোকালে সেভ
+        dbData.push(entry);
+        localStorage.setItem("control_room_db", JSON.stringify(dbData));
+
+        // ২. সিংক কিউতে জমা (অফলাইন হ্যান্ডলিং)
+        pendingSync.push(entry);
+        localStorage.setItem("pending_sync", JSON.stringify(pendingSync));
+        
+        // ৩. সিংক চেষ্টা
+        checkConnection();
+    }
+
+    // --- ইউটিলিটি ---
+    function updateClock() {
+        let now = new Date();
+        document.getElementById('liveTime').innerText = now.toLocaleTimeString();
+    }
+    
+    function runTimer() {
+        let diff = Date.now() - startTime;
+        let d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        let h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        let m = Math.floor((diff / (1000 * 60)) % 60);
+        let s = Math.floor((diff / 1000) % 60);
+        document.getElementById('timer').innerText = `${d}d ${h}h ${m}m ${s}s`;
+    }
+
+    function editDate() {
+        let newDate = prompt("Enter Start Date (YYYY-MM-DD):");
+        if(newDate) {
+            startTime = new Date(newDate).getTime();
+            localStorage.setItem("time_" + currentUser, startTime);
+            runTimer();
+        }
+    }
+
+    // থিম এবং ভাষা
+    function toggleThemeMenu() {
+        let menu = document.getElementById("theme-menu");
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+    function setTheme(theme) {
+        document.body.className = theme;
+        localStorage.setItem("app_theme", theme);
+        document.getElementById("theme-menu").style.display = "none";
+    }
+    function toggleLang() {
+        isEnglish = !isEnglish;
+        let t = isEnglish ? translations.en : translations.bn;
+        document.getElementById('langBtn').innerText = t.btn;
+        document.getElementById('t-ident').innerText = t.ident;
+        document.getElementById('t-access').innerText = t.access;
+        document.getElementById('t-userLbl').innerText = t.userLbl;
+        document.getElementById('t-dobLbl').innerText = t.dobLbl;
+        document.getElementById('btn-login').innerText = t.loginBtn;
+        document.getElementById('t-adminLink').innerText = t.adminLink;
+        document.getElementById('t-motive').innerHTML = t.motive;
+        document.getElementById('btn-reset').innerText = t.resetBtn;
+    }
+
+    // অ্যাডমিন ও এক্সপোর্ট
+    function openAdmin() {
+        if(prompt("Password:") === "admin123") {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-screen').style.display = 'flex';
+            loadLocalData();
+        }
+    }
+    function closeAdmin() {
+        document.getElementById('admin-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+    }
+    function loadLocalData() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = "";
+        let reversedData = [...dbData].reverse();
+        if(reversedData.length > 0) {
+            reversedData.forEach(row => {
+                let color = row.Status === "RELAPSED" ? "#ff4757" : "#00b894";
+                let tr = `<tr><td>${row.Date}</td><td>${row.Name}</td><td>${row.Duration}</td><td style='color:${color}'>${row.Status}</td></tr>`;
+                tbody.innerHTML += tr;
+            });
+        } else {
+            tbody.innerHTML = "<tr><td colspan='4'>No Data</td></tr>";
+        }
+    }
+    
+    function agentCreateSheet() {
+        let csvContent = "data:text/csv;charset=utf-8,Date,Time,Name,DOB,Duration,Status\n"; 
+        dbData.forEach(row => { csvContent += `${row.Date},${row.Time},${row.Name},${row.DOB},${row.Duration},${row.Status}\n`; });
+        const link = document.createElement("a");
+        link.href = encodeURI(csvContent); link.download = "Data.csv";
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+    
+    function copyTable() {
+        let text = "";
+        document.querySelectorAll("#dataTable tr").forEach(row => {
+            let rowData = [];
+            row.querySelectorAll("th, td").forEach(cell => rowData.push(cell.innerText));
+            text += rowData.join("\t") + "\n";
+        });
+        const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el);
+        el.select(); document.execCommand('copy'); document.body.removeChild(el);
+        alert("Copied!");
+    }
+
+    function downloadAsImage() {
+        html2canvas(document.getElementById("report-content"), { backgroundColor: getComputedStyle(document.body).getPropertyValue('--panel') }).then(canvas => {
+            let link = document.createElement("a"); link.download = "Report.png"; link.href = canvas.toDataURL("image/png"); link.click();
+        });
+    }
+
+    function playSirenSound() {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+        const gain = ctx.createGain();
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(400, ctx.currentTime + 0.5);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.5);
+    }
+
+    function speak(text) {
+        if ('speechSynthesis' in window) {
+            let msg = new SpeechSynthesisUtterance(text);
+            msg.rate = 0.9; window.speechSynthesis.speak(msg);
+        }
+    }
+    
+    function logout() { localStorage.removeItem("last_user"); location.reload(); }
+</script>
+
+</body>
+</html>
